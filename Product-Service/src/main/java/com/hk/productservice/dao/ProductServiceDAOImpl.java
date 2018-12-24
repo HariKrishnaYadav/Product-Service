@@ -1,5 +1,7 @@
 package com.hk.productservice.dao;
 
+import java.sql.ResultSet;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -52,39 +54,80 @@ public class ProductServiceDAOImpl implements ProductServiceDAO {
 	@Override
 	public List<Product> getProducts() {
 
-		logger.info("get product sql:"+PRODUCT_SQL_QUERY);
+		logger.info("get product sql:" + PRODUCT_SQL_QUERY);
 
 		Collection<Map<String, Object>> rows = jdbcTemplate.queryForList(PRODUCT_SQL_QUERY);
+		List<Product> productsList = new ArrayList<>();
+		rows.stream().map((row) -> {
+			Product product = new Product();
+			product.setCreatedby((String) row.get(CREATED_BY));
+			product.setCreateddate(String.valueOf(row.get(CREATED_DATE)));
+			product.setId((Integer) row.get(PRODUCT_ID));
+			product.setLastupdatedby((String) row.get(LAST_UPDATED_BY));
+			product.setLastupdateddate(String.valueOf(row.get(LAST_UPDATED_DATE)));
+			product.setName((String) row.get(PRODUCT_NAME));
+			product.setPrice((Float) row.get(PRODUCT_PRICE));
+			product.setQty((Integer) row.get(PRODUCT_QTY));
+			product.setSku((String) row.get(PRODUCT_SKU));
+			return product;
+		}).forEach((ss) -> {
+			productsList.add(ss);
+		});
 
-		return null;
+		return productsList;
 	}
 
 	@Override
 	public void deleteProduct(String id) {
+		logger.info("delete product sql:" + PRODUCT_DELETE_QUERY);
+		jdbcTemplate.update(PRODUCT_DELETE_QUERY, new Object[] { id });
 
 	}
 
 	@Override
 	public void updateProduct(Product product, String id) {
+		logger.info("update product sql:" + PRODUCT_UPDATE_QUERY);
+		jdbcTemplate.update(PRODUCT_UPDATE_QUERY, new Object[] { product.getName(), product.getSku(),
+				product.getPrice(), product.getQty(), (System.currentTimeMillis() / 1000), INITIAL_RECORD, id });
 
 	}
 
 	@Override
 	public boolean isSkuExists(String sku) {
 
-		return false;
+		logger.info("is SKU product exists sql:" + SKU_EXISTS_SQL_QUERY);
+		return jdbcTemplate.queryForObject(SKU_EXISTS_SQL_QUERY, new Object[] { sku }, Integer.class) > 0;
 	}
 
 	@Override
 	public boolean isProductExists(String id) {
 
-		return false;
+		logger.info("is product exists sql:" + PRODUCT_ID_EXISTS_SQL_QUERY);
+		return jdbcTemplate.queryForObject(PRODUCT_ID_EXISTS_SQL_QUERY, new Object[] { id }, Integer.class) > 0;
 	}
 
 	@Override
 	public Product getProductById(String id) {
 
-		return null;
-	}
+		logger.info("get product by id sql:" + SELECT_PRODUCT_BY_ID_SQL);
+		Product product = new Product();
+		try {
+			jdbcTemplate.queryForObject(SELECT_PRODUCT_BY_ID_SQL, new Object[] { id }, (ResultSet rs, int rowNum) -> {
+				product.setCreatedby(rs.getString(CREATED_BY));
+				product.setCreateddate(rs.getString(CREATED_DATE));
+				product.setId(rs.getInt(PRODUCT_ID));
+				product.setLastupdatedby(rs.getString(LAST_UPDATED_BY));
+				product.setLastupdateddate(rs.getString(LAST_UPDATED_DATE));
+				product.setName(rs.getString(PRODUCT_NAME));
+				product.setPrice(rs.getFloat(PRODUCT_PRICE));
+				product.setQty(rs.getInt(PRODUCT_QTY));
+				product.setSku(rs.getString(PRODUCT_SKU));
+				return product;
+			});
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
+		return product;
+	}
 }
